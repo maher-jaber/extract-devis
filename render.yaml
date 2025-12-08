@@ -1,0 +1,30 @@
+# render.yaml
+services:
+  - type: web
+    name: dental-quote-extractor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PYTHONPATH
+        value: /app
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: OCR_ENGINE
+        value: paddle
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+    buildCommand: docker build -t dental-quote-extractor .
+    startCommand: python run.py
+    autoDeploy: true
+    healthCheckPath: /health
+    plan: starter
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+    disk:
+      name: temp
+      mountPath: /tmp
+      sizeGB: 1

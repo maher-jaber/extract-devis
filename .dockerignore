@@ -1,30 +1,11 @@
-# .dockerignore
-# Fichiers à ignorer lors de la construction Docker
 .git/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
-venv/
-.venv/
 .env
-.env.local
-.env.*.local
-.vscode/
-.idea/
-*.log
-logs/
 temp/
 tmp/
-*.temp
-*.tmp
 *.pdf
-*.png
 *.jpg
-*.jpeg
-*.csv
-*.xlsx
-*.db
-*.sqlite3
+*.png

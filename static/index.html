@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracteur de Devis Dentaires</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section.dragover {
+            border-color: #2ecc71;
+            background: #f8fffe;
+        }
+
+        .upload-section h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background 0.3s ease;
+            margin: 10px;
+        }
+
+        .upload-btn:hover {
+            background: #2980b9;
+        }
+
+        .upload-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .section h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .treatments-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .treatments-table th,
+        .treatments-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .treatments-table th {
+            background: #34495e;
+            color: white;
+            font-weight: 600;
+        }
+
+        .treatments-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .success {
+            background: #2ecc71;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .financial-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .financial-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .financial-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+
+        .financial-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Extracteur de Devis Dentaires</h1>
+            <p>Téléchargez un devis dentaire PDF pour extraire automatiquement les informations</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-section" id="uploadSection">
+                <h3>📤 Télécharger un devis PDF</h3>
+                <p style="margin-bottom: 20px; color: #7f8c8d;">
+                    Glissez-déposez votre fichier PDF ou cliquez pour parcourir
+                </p>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choisir un fichier PDF
+                </button>
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Extraction des données en cours...</p>
+            </div>
+
+            <div class="error" id="errorMessage"></div>
+            <div class="success" id="successMessage"></div>
+
+            <div class="results" id="results">
+                <!-- Les résultats seront injectés ici -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        // Gestion du drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => {
+                uploadSection.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadSection.addEventListener(eventName, () => {
+                uploadSection.classList.remove('dragover');
+            }, false);
+        });
+
+        uploadSection.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf') {
+                    displayFileInfo(file);
+                    uploadFile(file);
+                } else {
+                    showError('Veuillez sélectionner un fichier PDF valide.');
+                }
+            }
+        }
+
+        function displayFileInfo(file) {
+            fileInfo.style.display = 'block';
+            fileInfo.innerHTML = `
+                <strong>Fichier sélectionné:</strong> ${file.name}<br>
+                <strong>Taille:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB
+            `;
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoading();
+            hideError();
+            hideSuccess();
+            hideResults();
+
+            try {
+                const response = await fetch('/extract-quote', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Erreur lors de l\'extraction');
+                }
+
+                const data = await response.json();
+                showSuccess('Extraction réussie !');
+                displayResults(data);
+                
+            } catch (error) {
+                showError(`Erreur: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResults(data) {
+            let html = '';
+
+            // Informations du dentiste
+            if (data.dentiste) {
+                html += `
+                    <div class="section">
+                        <h4>👨‍⚕️ Informations du Dentiste</h4>
+                        <div class="info-grid">
+                            ${createInfoItem('Nom du praticien', data.dentiste.nom_praticien)}
+                            ${createInfoItem('RPPS', data.dentiste.rpps)}
+                            ${createInfoItem('ADELI', data.dentiste.adeli)}
+                            ${createInfoItem('FINESS', data.dentiste.finess)}
+                            ${createInfoItem('Adresse', data.dentiste.adresse)}
+                            ${createInfoItem('Numéro établissement', data.dentiste.numero_etablissement)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Informations du patient
+            if (data.patient) {
+                html += `
+                    <div class="section">
+                        <h4>👤 Informations du Patient</h4>
+                        <div class="info-grid">
+                            ${createInfoItem('Nom', data.patient.nom)}
+                            ${createInfoItem('Date de naissance', data.patient.date_naissance)}
+                            ${createInfoItem('Numéro de sécurité sociale', data.patient.numero_securite_sociale)}
+                            ${createInfoItem('Adresse', data.patient.adresse)}
+                            ${createInfoItem('Numéro établissement', data.patient.numero_etablissement)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Informations du devis
+            if (data.devis) {
+                html += `
+                    <div class="section">
+                        <h4>📋 Informations du Devis</h4>
+                        <div class="info-grid">
+                            ${createInfoItem('Numéro du devis', data.devis.numero)}
+                            ${createInfoItem('Date du devis', data.devis.date_devis)}
+                            ${createInfoItem('Validité jusqu\'au', data.devis.validite)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Traitements
+            if (data.traitements && data.traitements.length > 0) {
+                let treatmentsHtml = '<table class="treatments-table"><thead><tr>';
+                treatmentsHtml += '<th>Code Acte</th><th>Dent</th><th>Description</th><th>Panier</th>';
+                treatmentsHtml += '<th>Honoraires</th><th>Prix Dispositif</th><th>Base Remboursement</th><th>Reste à Charge</th>';
+                treatmentsHtml += '</tr></thead><tbody>';
+
+                data.traitements.forEach(traitement => {
+                    treatmentsHtml += `
+                        <tr>
+                            <td>${traitement.code_acte || '-'}</td>
+                            <td>${traitement.dent || '-'}</td>
+                            <td>${traitement.description || '-'}</td>
+                            <td>${traitement.panier || '-'}</td>
+                            <td>${formatCurrency(traitement.honoraires)}</td>
+                            <td>${formatCurrency(traitement.prix_dispositif_medical)}</td>
+                            <td>${formatCurrency(traitement.base_remboursement)}</td>
+                            <td>${formatCurrency(traitement.reste_a_charge)}</td>
+                        </tr>
+                    `;
+                });
+
+                treatmentsHtml += '</tbody></table>';
+                
+                html += `
+                    <div class="section">
+                        <h4>🦷 Traitements Prévus</h4>
+                        ${treatmentsHtml}
+                    </div>
+                `;
+            }
+
+            // Résumé financier
+            if (data.financier) {
+                html += `
+                    <div class="section">
+                        <h4>💰 Résumé Financier</h4>
+                        <div class="financial-summary">
+                            ${createFinancialItem('Honoraires Total', data.financier.honoraires_total)}
+                            ${createFinancialItem('Prix Dispositif Médical', data.financier.prix_dispositif_medical)}
+                            ${createFinancialItem('Base Remboursement AMO', data.financier.base_remboursement_amo)}
+                            ${createFinancialItem('Montant Remboursé AMO', data.financier.montant_rembourse_amo)}
+                            ${createFinancialItem('Reste à Charge', data.financier.reste_a_charge)}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Informations complémentaires
+            if (data.informations_complementaires) {
+                const info = data.informations_complementaires;
+                html += `
+                    <div class="section">
+                        <h4>📝 Informations Complémentaires</h4>
+                        <div class="info-grid">
+                            ${createInfoItem('Consentement éclairé', info.consentement_eclaire_present ? 'Oui' : 'Non')}
+                            ${createInfoItem('Date consentement', info.date_consentement)}
+                            ${createInfoItem('Acompte requis', info.acompte_requis ? 'Oui' : 'Non')}
+                            ${createInfoItem('Téléphone', info.telephone)}
+                            ${createInfoItem('Signature patient', info.signature_patient ? 'Oui' : 'Non')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            results.innerHTML = html;
+            showResults();
+        }
+
+        function createInfoItem(label, value) {
+            if (!value) return '';
+            return `
+                <div class="info-item">
+                    <div class="info-label">${label}</div>
+                    <div class="info-value">${value}</div>
+                </div>
+            `;
+        }
+
+        function createFinancialItem(label, value) {
+            return `
+                <div class="financial-item">
+                    <div class="financial-label">${label}</div>
+                    <div class="financial-value">${formatCurrency(value)}</div>
+                </div>
+            `;
+        }
+
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined) return '-';
+            return new Intl.NumberFormat('fr-FR', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(amount);
+        }
+
+        function showLoading() {
+            loading.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showResults() {
+            results.style.display = 'block';
+        }
+
+        function hideResults() {
+            results.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+        }
+
+        function hideSuccess() {
+            successMessage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

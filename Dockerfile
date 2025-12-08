@@ -27,8 +27,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copier le reste du code
 COPY api.py main.py run.py ./
 
-# Copier l'interface utilisateur
-COPY index.html static/
+# Copier index.html à la racine
+COPY index.html ./
+
+# Créer le répertoire static et copier index.html dedans aussi
+RUN mkdir -p static && \
+    cp index.html static/
 
 # Exposer le port
 EXPOSE 8000

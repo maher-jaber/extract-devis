@@ -1,4 +1,4 @@
-# Dockerfile corrigé
+# Dockerfile
 FROM python:3.11-slim
 
 # Installer les dépendances système minimales
@@ -27,8 +27,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copier le reste du code
 COPY api.py main.py run.py ./
 
-# Créer le répertoire static et copier les fichiers statiques
-COPY static/ static/
+# Copier l'interface utilisateur
+COPY index.html static/
 
 # Exposer le port
 EXPOSE 8000

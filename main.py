@@ -14,11 +14,11 @@ import fitz  # PyMuPDF
 import easyocr
 import os
 import torch
-
+import paddle;
 # -------------------------
 # Configuration GPU RTX 2050
 # -------------------------
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if paddle.device.get_device() else 'cpu'
 print(f"Device détecté: {device}")
 
 # -------------------------
@@ -27,19 +27,10 @@ print(f"Device détecté: {device}")
 try:
     # PaddleOCR configuré pour 4GB VRAM
     ocr_engine = PaddleOCR(
-        lang='fr',
-        use_angle_cls=True,
-        use_gpu=(device == 'cuda'),
-        gpu_mem=3500,  # Laisser 500MB pour le système
-        det_db_thresh=0.3,
-        det_db_box_thresh=0.3,
-        det_db_unclip_ratio=1.5,
-        use_dilation=False,  # Désactivé pour économiser VRAM
-        rec_batch_num=2,  # Batch réduit pour 4GB
-        show_log=False,
-        max_batch_size=4,
-        drop_score=0.1  # Accepter plus de texte même avec faible confiance
+    use_angle_cls=True,
+    lang='fr'
     )
+
     print("✓ PaddleOCR initialisé (GPU)" if device == 'cuda' else "✓ PaddleOCR initialisé (CPU)")
 except Exception as e:
     print(f"✗ Erreur PaddleOCR: {e}")
@@ -47,15 +38,8 @@ except Exception as e:
 
 try:
     # EasyOCR plus léger
-    easyocr_reader = easyocr.Reader(
-        ['fr', 'en'],
-        gpu=(device == 'cuda'),
-        model_storage_directory=None,
-        download_enabled=True,
-        detector=True,
-        recognizer=True
-    )
-    print("✓ EasyOCR initialisé (GPU)" if device == 'cuda' else "✓ EasyOCR initialisé (CPU)")
+    easyocr_reader = easyocr.Reader(['fr'], gpu=True)
+    print("✓ EasyOCR initialisé (GPU)" if ocr_engine != None else "✓ EasyOCR initialisé (CPU)")
 except Exception as e:
     print(f"✗ Erreur EasyOCR: {e}")
     easyocr_reader = None
@@ -63,6 +47,25 @@ except Exception as e:
 # -------------------------
 # Utilitaires généraux - OPTIMISÉS
 # -------------------------
+
+def correct_ocr_codes(text: str) -> str:
+    """Corrige les codes HBLD mal reconnus par l'OCR"""
+    corrections = {
+        r'HBLD0[5-9]0': 'HBLD350',  # HBLD050 → HBLD350
+        r'HBLD\d{2}': lambda m: m.group(0),  # Garder les autres
+        r'HB LD': 'HBLD',
+        r'H BL D': 'HBLD',
+        r'HB LD(\d+)': r'HBLD\1',
+    }
+    
+    for pattern, replacement in corrections.items():
+        if callable(replacement):
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        else:
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    return text
+
 def safe_strip(s: Optional[str]) -> Optional[str]:
     return str(s).strip() if s is not None and str(s).strip() else None
 
@@ -149,7 +152,7 @@ def run_ocr_complete(img_path: str) -> str:
     # 1. PADDLEOCR (meilleur pour le français)
     if ocr_engine:
         try:
-            result = ocr_engine.predict(img_to_ocr)
+            result = ocr_engine.ocr(img_to_ocr)
             if result:
                 page_texts = []
                 for line in result[0]:
@@ -450,30 +453,46 @@ def extract_totals_from_tables(tables_data: List[Dict[str, Any]], full_text: str
 # Infos complémentaires
 # -------------------------
 def extract_consent_and_misc(full_text: str) -> Dict[str, Any]:
-    consent_text_present = bool(re.search(r'consentement[^:\n]*éclair', full_text, re.IGNORECASE))
-    acompte_required = bool(re.search(r'acompte|avance|versement[^:\n]*initial', full_text, re.IGNORECASE))
-    
-    date_consent = None
-    for pattern in [r'Fait[^,\n]*,\s*le\s*(\d{2}/\d{2}/\d{4})', r'Date[^:\n]*[:\-]\s*(\d{2}/\d{2}/\d{4})']:
-        m = re.search(pattern, full_text)
-        if m:
-            date_consent = m.group(1)
-            break
-    
-    phone = find_first_match([
-        r'Téléphone[^:\n]*[:\-]\s*([+\d\s\-]+)',
-        r'Tel[^:\n]*[:\-]\s*([+\d\s\-]+)',
-        r'(\d{2}[ \.]\d{2}[ \.]\d{2}[ \.]\d{2})'
-    ], full_text)
-    
-    signature_patient = bool(re.search(r'signature[^:\n]*patient|Lu et approuvé', full_text, re.IGNORECASE))
-    
+    text_norm = re.sub(r'\s+', ' ', full_text)
+
+    # Consentement éclairé
+    consent_present = bool(re.search(
+        r'(consentement|accord).*?(éclair|informé)',
+        text_norm, re.IGNORECASE
+    ))
+
+    # Organisme complémentaire
+    mutuelle = find_first_match([
+        r"Mutuelle[^:\n]*[:\-]?\s*([A-Z0-9][A-Za-z0-9 \-]+)",
+        r"Complémentaire[^:\n]*[:\-]?\s*([A-Z0-9][A-Za-z0-9 \-]+)"
+    ], text_norm, flags=re.IGNORECASE)
+
+    # Base AMO – brute si non trouvée ailleurs
+    base_amo = find_first_match([
+        r"Base\s+AMO[^0-9]*([0-9\s.,]+)",
+        r"Remboursement\s+AMO[^0-9]*([0-9\s.,]+)"
+    ], text_norm, flags=re.IGNORECASE)
+    base_amo = to_float_amount(base_amo)
+
+    # Acompte (si payé ou demandé)
+    acompte = find_first_match([
+        r"Acompte[^0-9]*([0-9\s.,]+)",
+        r"Versement\s+initial[^0-9]*([0-9\s.,]+)"
+    ], text_norm, flags=re.IGNORECASE)
+    acompte = to_float_amount(acompte)
+
+    # Mentions obligatoires légales
+    mentions_legales = bool(re.search(
+        r"(information\s+précontractuelle|notice\s+HAS|code\s+de\s+la\s+santé)",
+        text_norm, re.IGNORECASE
+    ))
+
     return {
-        "consentement_eclaire_present": consent_text_present,
-        "date_consentement": date_consent,
-        "acompte_requis": acompte_required,
-        "telephone": phone,
-        "signature_patient": signature_patient
+        "consentement_eclaire": consent_present,
+        "mutuelle": mutuelle,
+        "base_amo_detectee": base_amo,
+        "acompte": acompte,
+        "mentions_legales_presentes": mentions_legales
     }
 
 # -------------------------
@@ -519,6 +538,9 @@ def extract_pdf_text_and_tables_optimized(pdf_path: str) -> Tuple[str, List[Dict
     print("→ Passage à l'OCR amélioré...")
     ocr_text = ocr_from_pdf_enhanced(pdf_path)
     
+    # CORRIGER LES CODES OCR
+    ocr_text = correct_ocr_codes(ocr_text)
+    
     # Pour l'OCR, on n'a pas de vraies tables, on les simule
     tables_from_ocr = []
     lines = ocr_text.split('\n')
@@ -537,137 +559,133 @@ def extract_pdf_text_and_tables_optimized(pdf_path: str) -> Tuple[str, List[Dict
                 })
     
     return ocr_text, tables_from_ocr
-
 # -------------------------
 # EXTRACTION TRAITEMENTS - TRÈS AMÉLIORÉE
 # -------------------------
 def extract_treatments_aggressive(full_text: str, tables_data: List[Dict]) -> List[Dict[str, Any]]:
-    """Extraction AGGRESSIVE des traitements"""
+    """Extraction ULTRA FLEXIBLE des traitements"""
     treatments = []
     
-    print("  Extraction agressive des traitements...")
+    print("  Extraction FLEXIBLE des traitements...")
     
-    # Méthode 1: Depuis les tables
-    for table_info in tables_data:
-        table = table_info.get('table', [])
-        for row in table:
-            row_text = ' '.join([str(c) for c in row if c])
-            if not row_text:
-                continue
-                
-            # Chercher HBLD dans cette ligne
-            hbld_match = re.search(r'(HBLD\d+)', row_text, re.IGNORECASE)
-            if hbld_match:
-                code = hbld_match.group(1).upper()
-                
-                # Chercher les montants
-                amounts = re.findall(r'(\d+[.,]\d{2})', row_text)
-                
-                # Chercher numéro de dent
-                dent_match = re.search(r'\b(\d{1,2})\b', row_text[:30])
-                dent = dent_match.group(1) if dent_match else None
-                
-                # Description (premiers 100 caractères après le code)
-                code_pos = row_text.find(code)
-                desc_start = code_pos + len(code)
-                description = row_text[desc_start:desc_start+100].strip()
-                
-                if len(amounts) >= 4:
-                    treatments.append({
-                        "code_acte": code,
-                        "dent": dent,
-                        "description": description,
-                        "honoraires": to_float_amount(amounts[0]),
-                        "prix_dispositif_medical": to_float_amount(amounts[1]),
-                        "base_remboursement": to_float_amount(amounts[2]),
-                        "reste_a_charge": to_float_amount(amounts[3])
-                    })
+    # 1. D'abord, chercher TOUTES les occurrences de HBLD dans le texte
+    hbld_pattern = r'HBLD\d{3,}'
+    all_hbld_matches = list(re.finditer(hbld_pattern, full_text, re.IGNORECASE))
     
-    # Méthode 2: Recherche DIRECTE dans tout le texte
-    if len(treatments) < 3:  # Si pas assez trouvé
-        print("  Recherche directe dans le texte brut...")
+    print(f"  → {len(all_hbld_matches)} codes HBLD trouvés dans le texte")
+    
+    # 2. Pour chaque code HBLD trouvé, chercher le contexte
+    for match in all_hbld_matches:
+        code = match.group(0).upper()
         
-        # Pattern pour trouver HBLD + contexte
-        pattern = r'(HBLD\d+)[^€]*?(\d+[.,]\d{2})[^€]*?(\d+[.,]\d{2})[^€]*?(\d+[.,]\d{2})[^€]*?(\d+[.,]\d{2})'
+        # Prendre un gros contexte autour du code (200 caractères avant et après)
+        start_context = max(0, match.start() - 100)
+        end_context = min(len(full_text), match.end() + 150)
+        context = full_text[start_context:end_context]
         
-        for match in re.finditer(pattern, full_text, re.IGNORECASE):
-            code = match.group(1).upper()
-            amounts = [match.group(i) for i in range(2, 6)]
-            
-            # Contexte avant pour trouver la dent
-            context_start = max(0, match.start() - 30)
-            context_before = full_text[context_start:match.start()]
-            dent_match = re.search(r'\b(\d{1,2})\b', context_before)
+        # Nettoyer le contexte
+        context = re.sub(r'\s+', ' ', context)
+        
+        # Chercher TOUS les montants dans ce contexte
+        amounts = re.findall(r'\d+[.,]\d{2}', context)
+        
+        # Si on a au moins 3 montants, c'est probablement un traitement
+        if len(amounts) >= 3:
+            # Chercher un numéro de dent (1-48) près du code
+            # On cherche dans les 30 caractères avant le code
+            before_code = full_text[max(0, match.start()-30):match.start()]
+            dent_match = re.search(r'\b(1[0-9]|2[0-9]|3[0-9]|4[0-8]|[1-9])\b', before_code)
             dent = dent_match.group(1) if dent_match else None
             
-            # Contexte après pour description
-            context_end = min(len(full_text), match.end() + 100)
-            context_after = full_text[match.start():context_end]
+            # Si pas trouvé avant, chercher après
+            if not dent:
+                after_code = full_text[match.end():min(len(full_text), match.end()+30)]
+                dent_match = re.search(r'\b(1[0-9]|2[0-9]|3[0-9]|4[0-8]|[1-9])\b', after_code)
+                dent = dent_match.group(1) if dent_match else None
             
-            # Extraire description raisonnable
-            desc_match = re.search(r'(?:pose|prothèse|couronne|implant|dentaire)[^.,;]{10,80}', 
-                                  context_after, re.IGNORECASE)
-            description = desc_match.group(0) if desc_match else f"Traitement {code}"
+            # Description simple (50 premiers caractères du contexte)
+            description = context[:100].strip()
             
-            treatments.append({
+            # Prendre les montants (au moins 4 si possible)
+            treatment_data = {
                 "code_acte": code,
-                "dent": dent,
-                "description": description[:150],
-                "honoraires": to_float_amount(amounts[0]),
-                "prix_dispositif_medical": to_float_amount(amounts[1]),
-                "base_remboursement": to_float_amount(amounts[2]),
-                "reste_a_charge": to_float_amount(amounts[3])
-            })
+                "dent": dent or "?",
+                "description": description,
+            }
+            
+            # Ajouter les montants disponibles
+            if len(amounts) >= 1:
+                treatment_data["honoraires"] = to_float_amount(amounts[0])
+            if len(amounts) >= 2:
+                treatment_data["prix_dispositif_medical"] = to_float_amount(amounts[1])
+            if len(amounts) >= 3:
+                treatment_data["base_remboursement"] = to_float_amount(amounts[2])
+            if len(amounts) >= 4:
+                treatment_data["reste_a_charge"] = to_float_amount(amounts[3])
+            elif len(amounts) >= 1:
+                # Si pas 4 montants, le dernier est peut-être le reste
+                treatment_data["reste_a_charge"] = to_float_amount(amounts[-1])
+            
+            treatments.append(treatment_data)
     
-    # Méthode 3: Recherche PAR LIGNES
-    if not treatments:
-        print("  Analyse ligne par ligne...")
+    # 3. Recherche par LIGNES - méthode simple
+    if len(treatments) < 3:  # Si pas assez trouvé
+        print("  Recherche par lignes...")
         lines = full_text.split('\n')
         
         for line in lines:
-            line_clean = norm_whitespace(line)
-            if len(line_clean) < 20:
+            line_clean = line.strip()
+            if len(line_clean) < 30:  # Ignorer les lignes trop courtes
                 continue
-                
-            # Vérifier si c'est une ligne de traitement
-            has_hbld = re.search(r'HBLD\d+', line_clean, re.IGNORECASE)
-            has_amounts = len(re.findall(r'\d+[.,]\d{2}', line_clean)) >= 3
             
-            if has_hbld and has_amounts:
-                # Code
-                code_match = re.search(r'(HBLD\d+)', line_clean, re.IGNORECASE)
-                code = code_match.group(1).upper() if code_match else None
+            # Vérifier si la ligne contient un HBLD
+            if re.search(r'HBLD\d{3}', line_clean, re.IGNORECASE):
+                # Chercher tous les montants dans cette ligne
+                amounts = re.findall(r'\d+[.,]\d{2}', line_clean)
                 
-                # Montants (prendre les 4 premiers)
-                amounts = re.findall(r'\d+[.,]\d{2}', line_clean)[:4]
-                
-                # Dent (chercher au début de la ligne)
-                dent_match = re.search(r'^\s*(\d{1,2})\s+', line_clean)
-                dent = dent_match.group(1) if dent_match else None
-                
-                if code and len(amounts) >= 4:
+                if len(amounts) >= 2:  # Au moins 2 montants
+                    # Code HBLD
+                    code_match = re.search(r'(HBLD\d{3})', line_clean, re.IGNORECASE)
+                    code = code_match.group(1).upper() if code_match else "HBLDxxx"
+                    
+                    # Numéro de dent (chercher n'importe quel nombre 1-48)
+                    dent_match = re.search(r'\b(1[0-9]|2[0-9]|3[0-9]|4[0-8]|[1-9])\b', line_clean)
+                    dent = dent_match.group(1) if dent_match else "?"
+                    
                     treatments.append({
                         "code_acte": code,
                         "dent": dent,
-                        "description": line_clean[:120],
+                        "description": line_clean[:80],
                         "honoraires": to_float_amount(amounts[0]),
-                        "prix_dispositif_medical": to_float_amount(amounts[1]),
-                        "base_remboursement": to_float_amount(amounts[2]),
-                        "reste_a_charge": to_float_amount(amounts[3])
+                        "reste_a_charge": to_float_amount(amounts[-1])
                     })
     
-    # Déduplication
+    # 4. DÉDUPLICATION intelligente
+    print(f"  → {len(treatments)} traitements avant déduplication")
+    
+    unique_treatments = []
     seen = set()
-    unique = []
+    
     for t in treatments:
-        key = f"{t.get('dent')}_{t.get('code_acte')}_{t.get('honoraires')}"
+        # Créer une clé unique basée sur le code et les montants
+        if t.get("honoraires"):
+            key = f"{t['code_acte']}_{t.get('honoraires')}"
+        else:
+            key = f"{t['code_acte']}_{t.get('dent')}"
+        
         if key not in seen:
             seen.add(key)
-            unique.append(t)
+            unique_treatments.append(t)
     
-    print(f"  → {len(unique)} traitements uniques trouvés")
-    return unique
-
+    print(f"  → {len(unique_treatments)} traitements uniques après déduplication")
+    
+    # 5. AFFICHER CE QU'ON A TROUVÉ (pour debug)
+    if unique_treatments:
+        print("\n  Détail des traitements trouvés:")
+        for i, t in enumerate(unique_treatments, 1):
+            print(f"    {i}. {t['code_acte']} - Dent {t.get('dent', '?')}: €{t.get('honoraires', '?')} (reste: €{t.get('reste_a_charge', '?')})")
+    
+    return unique_treatments
 # -------------------------
 # FONCTION PRINCIPALE - FINALE
 # -------------------------
@@ -761,25 +779,56 @@ def extract_dental_quote(pdf_path: str) -> Dict[str, Any]:
 # -------------------------
 # EXÉCUTION
 # -------------------------
+def analyse_devis(pdf_path: str) -> Dict[str, Any]:
+    print(f"\n=== ANALYSE DU DOCUMENT : {pdf_path} ===")
+
+    # 1. Extraction OCR avancée
+    full_text = ocr_from_pdf_enhanced(pdf_path)
+
+    # 2. Champs de base (dentiste + patient + devis)
+    basic_fields = extract_basic_fields(full_text)
+
+    # 3. Extraction tables PDF (si PDF texte)
+    tables_data = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for i, page in enumerate(pdf.pages):
+                tables = page.extract_tables()
+                for table in tables:
+                    tables_data.append({
+                        "page": i + 1,
+                        "table": table
+                    })
+    except Exception as e:
+        print(f"Erreur tables PDF : {e}")
+
+    # 4. Totaux financiers
+    totals = extract_totals_from_tables(tables_data, full_text)
+
+    # 5. Consentement et diverses informations
+    misc = extract_consent_and_misc(full_text)
+
+    return {
+        "texte_complet_ocr": full_text,
+        "identification": basic_fields,
+        "tables": tables_data,
+        "totaux": totals,
+        "informations_complementaires": misc
+    }
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python main2.py <chemin_vers_pdf>")
+        print("Usage: python main2.py fichier.pdf")
         sys.exit(1)
-    
+
     pdf_path = sys.argv[1]
-    
     if not os.path.exists(pdf_path):
-        print(f"Erreur: Fichier '{pdf_path}' non trouvé.")
+        print(f"Erreur : fichier introuvable : {pdf_path}")
         sys.exit(1)
-    
-    # Lancer l'extraction
-    result = extract_dental_quote(pdf_path)
-    
-    # Afficher en JSON
-    print("\n" + json.dumps(result, ensure_ascii=False, indent=2))
-    
-    # Sauvegarder
-    output_file = f"EXTRACTION_{os.path.basename(pdf_path).replace('.pdf', '.json')}"
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(result, f, ensure_ascii=False, indent=2)
-    print(f"\n✓ Résultat sauvegardé dans: {output_file}")
+
+    result = analyse_devis(pdf_path)
+
+    # Output JSON propre
+    print("\n=== RÉSULTAT JSON ===")
+    print(json.dumps(result, indent=4, ensure_ascii=False))

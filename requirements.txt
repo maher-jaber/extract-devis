@@ -1,11 +1,24 @@
+# Numpy doit être installé en premier
+numpy==1.26.4
+scipy==1.11.0
+# PyMuPDF (PDF manipulation) avec flags silencieux pour warnings compilation
+PyMuPDF
+
+# OpenCV headless pour serveur FastAPI
+opencv-python-headless==4.9.0.80
+
+# FastAPI + serveur ASGI
 fastapi==0.104.1
 uvicorn==0.24.0
 python-multipart==0.0.6
+aiofiles==23.2.1
+
+# PDF utilities
 pdfplumber==0.10.3
 python-magic==0.4.27
-aiofiles==23.2.1
-opencv-python
-paddleocr
-paddlepaddle
-PyMuPDF
-easyocr
+
+# OCR libraries
+easyocr==1.7.1
+paddleocr==2.7.0.3
+gunicorn
+

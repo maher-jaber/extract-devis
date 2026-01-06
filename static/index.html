@@ -3,547 +3,359 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extracteur de Devis Dentaires</title>
+    <title>Dental Quote Extractor Ultra</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-
-        .header {
-            background: #2c3e50;
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            opacity: 0.8;
-            font-size: 1.1em;
-        }
-
-        .content {
-            padding: 40px;
-        }
-
-        .upload-section {
-            border: 3px dashed #3498db;
-            border-radius: 10px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            transition: all 0.3s ease;
-        }
-
-        .upload-section.dragover {
-            border-color: #2ecc71;
-            background: #f8fffe;
-        }
-
-        .upload-section h3 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .upload-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1.1em;
-            transition: background 0.3s ease;
-            margin: 10px;
-        }
-
-        .upload-btn:hover {
-            background: #2980b9;
-        }
-
-        .upload-btn:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-        }
-
-        .file-info {
-            margin-top: 20px;
-            padding: 15px;
-            background: #ecf0f1;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 20px 0;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .results {
-            display: none;
-            margin-top: 30px;
-        }
-
-        .section {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 20px;
-            border-left: 4px solid #3498db;
-        }
-
-        .section h4 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-        }
-
-        .info-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #7f8c8d;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .info-value {
-            color: #2c3e50;
-            font-size: 1.1em;
-        }
-
-        .treatments-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .treatments-table th,
-        .treatments-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .treatments-table th {
-            background: #34495e;
-            color: white;
-            font-weight: 600;
-        }
-
-        .treatments-table tr:hover {
-            background: #f5f5f5;
-        }
-
-        .error {
-            background: #e74c3c;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .success {
-            background: #2ecc71;
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            display: none;
-        }
-
-        .financial-summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .financial-item {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        .financial-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin: 10px 0;
-        }
-
-        .financial-label {
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .result-section { background-color: #fff; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .treatment-item { border-left: 4px solid #0d6efd; padding-left: 15px; margin-bottom: 10px; }
+        .highlight { background-color: #e7f1ff; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📄 Extracteur de Devis Dentaires</h1>
-            <p>Téléchargez un devis dentaire PDF pour extraire automatiquement les informations</p>
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-4">🦷 Dental Quote Extractor Ultra</h1>
+            <p class="lead">Extraction avancée de devis dentaires PDF (texte et scannés)</p>
+            <div class="badge bg-primary">Version 2.0.0</div>
         </div>
 
-        <div class="content">
-            <div class="upload-section" id="uploadSection">
-                <h3>📤 Télécharger un devis PDF</h3>
-                <p style="margin-bottom: 20px; color: #7f8c8d;">
-                    Glissez-déposez votre fichier PDF ou cliquez pour parcourir
-                </p>
-                <input type="file" id="fileInput" class="file-input" accept=".pdf">
-                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    Choisir un fichier PDF
+        <!-- Section Upload -->
+        <div class="card mb-5">
+            <div class="card-header bg-primary text-white">
+                <h4>📤 Upload du PDF</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="file" class="form-control" id="pdfFile" accept=".pdf">
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="debugMode">
+                            <label class="form-check-label" for="debugMode">
+                                Mode Debug (sauvegarde les fichiers intermédiaires)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100" onclick="extractQuote()">
+                            <span id="uploadBtnText">Extraire les données</span>
+                            <span id="uploadSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        </button>
+                    </div>
+                </div>
+                <div id="uploadProgress" class="mt-3 d-none">
+                    <div class="progress">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small id="progressText" class="text-muted"></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div id="results" class="d-none">
+            <!-- Métadonnées -->
+            <div class="result-section">
+                <h4>📊 Métadonnées</h4>
+                <div id="metadata" class="row"></div>
+            </div>
+
+            <!-- Informations de base -->
+            <div class="result-section">
+                <h4>👨‍⚕️ Informations</h4>
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Dentiste</h6>
+                        <div id="dentisteInfo"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Patient</h6>
+                        <div id="patientInfo"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Devis</h6>
+                        <div id="devisInfo"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Traitements -->
+            <div class="result-section">
+                <h4>🦷 Traitements</h4>
+                <div id="treatmentsContainer">
+                    <table class="table table-hover" id="treatmentsTable">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Dent</th>
+                                <th>Description</th>
+                                <th>Honoraires</th>
+                                <th>Reste à charge</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treatmentsBody"></tbody>
+                    </table>
+                </div>
+                <div class="mt-3">
+                    <canvas id="treatmentsChart" height="100"></canvas>
+                </div>
+            </div>
+
+            <!-- Résumé financier -->
+            <div class="result-section">
+                <h4>💰 Résumé financier</h4>
+                <div class="row" id="financialSummary"></div>
+                <div class="mt-3">
+                    <canvas id="financeChart" height="100"></canvas>
+                </div>
+            </div>
+
+            <!-- Téléchargement JSON -->
+            <div class="text-center mt-4">
+                <button class="btn btn-outline-primary" onclick="downloadJSON()">
+                    📥 Télécharger les données JSON
                 </button>
-                <div class="file-info" id="fileInfo"></div>
             </div>
+        </div>
 
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Extraction des données en cours...</p>
-            </div>
-
-            <div class="error" id="errorMessage"></div>
-            <div class="success" id="successMessage"></div>
-
-            <div class="results" id="results">
-                <!-- Les résultats seront injectés ici -->
+        <!-- Job Status pour batch -->
+        <div id="batchStatus" class="d-none">
+            <div class="alert alert-info">
+                <h5>Traitement par lot en cours</h5>
+                <div id="batchProgress"></div>
+                <button class="btn btn-sm btn-outline-info mt-2" onclick="checkBatchStatus()">
+                    Actualiser
+                </button>
             </div>
         </div>
     </div>
 
     <script>
-        const uploadSection = document.getElementById('uploadSection');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const loading = document.getElementById('loading');
-        const results = document.getElementById('results');
-        const errorMessage = document.getElementById('errorMessage');
-        const successMessage = document.getElementById('successMessage');
+        let currentResult = null;
+        let currentJobId = null;
 
-        // Gestion du drag and drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, () => {
-                uploadSection.classList.add('dragover');
-            }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadSection.addEventListener(eventName, () => {
-                uploadSection.classList.remove('dragover');
-            }, false);
-        });
-
-        uploadSection.addEventListener('drop', handleDrop, false);
-        fileInput.addEventListener('change', handleFileSelect, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
-
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            handleFiles(files);
-        }
-
-        function handleFiles(files) {
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.type === 'application/pdf') {
-                    displayFileInfo(file);
-                    uploadFile(file);
-                } else {
-                    showError('Veuillez sélectionner un fichier PDF valide.');
-                }
+        async function extractQuote() {
+            const fileInput = document.getElementById('pdfFile');
+            const debugMode = document.getElementById('debugMode').checked;
+            
+            if (!fileInput.files.length) {
+                alert('Veuillez sélectionner un fichier PDF');
+                return;
             }
-        }
 
-        function displayFileInfo(file) {
-            fileInfo.style.display = 'block';
-            fileInfo.innerHTML = `
-                <strong>Fichier sélectionné:</strong> ${file.name}<br>
-                <strong>Taille:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB
-            `;
-        }
-
-        async function uploadFile(file) {
+            const file = fileInput.files[0];
             const formData = new FormData();
             formData.append('file', file);
-
-            showLoading();
-            hideError();
-            hideSuccess();
-            hideResults();
-
+            
+            // Afficher la progression
+            document.getElementById('uploadProgress').classList.remove('d-none');
+            document.getElementById('uploadBtnText').textContent = 'Extraction en cours...';
+            document.getElementById('uploadSpinner').classList.remove('d-none');
+            
             try {
                 const response = await fetch('/extract-quote', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'debug': debugMode.toString()
+                    }
                 });
-
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || 'Erreur lors de l\'extraction');
+                    throw new Error(`Erreur ${response.status}: ${response.statusText}`);
                 }
-
-                const data = await response.json();
-                showSuccess('Extraction réussie !');
-                displayResults(data);
+                
+                const result = await response.json();
+                currentResult = result;
+                
+                // Afficher les résultats
+                displayResults(result);
                 
             } catch (error) {
-                showError(`Erreur: ${error.message}`);
+                alert('Erreur: ' + error.message);
+                console.error(error);
             } finally {
-                hideLoading();
+                // Réinitialiser UI
+                document.getElementById('uploadProgress').classList.add('d-none');
+                document.getElementById('uploadBtnText').textContent = 'Extraire les données';
+                document.getElementById('uploadSpinner').classList.add('d-none');
+                document.getElementById('progressBar').style.width = '0%';
             }
         }
 
-        function displayResults(data) {
-            let html = '';
-
-            // Informations du dentiste
-            if (data.dentiste) {
-                html += `
-                    <div class="section">
-                        <h4>👨‍⚕️ Informations du Dentiste</h4>
-                        <div class="info-grid">
-                            ${createInfoItem('Nom du praticien', data.dentiste.nom_praticien)}
-                            ${createInfoItem('RPPS', data.dentiste.rpps)}
-                            ${createInfoItem('ADELI', data.dentiste.adeli)}
-                            ${createInfoItem('FINESS', data.dentiste.finess)}
-                            ${createInfoItem('Adresse', data.dentiste.adresse)}
-                            ${createInfoItem('Numéro établissement', data.dentiste.numero_etablissement)}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Informations du patient
-            if (data.patient) {
-                html += `
-                    <div class="section">
-                        <h4>👤 Informations du Patient</h4>
-                        <div class="info-grid">
-                            ${createInfoItem('Nom', data.patient.nom)}
-                            ${createInfoItem('Date de naissance', data.patient.date_naissance)}
-                            ${createInfoItem('Numéro de sécurité sociale', data.patient.numero_securite_sociale)}
-                            ${createInfoItem('Adresse', data.patient.adresse)}
-                            ${createInfoItem('Numéro établissement', data.patient.numero_etablissement)}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Informations du devis
-            if (data.devis) {
-                html += `
-                    <div class="section">
-                        <h4>📋 Informations du Devis</h4>
-                        <div class="info-grid">
-                            ${createInfoItem('Numéro du devis', data.devis.numero)}
-                            ${createInfoItem('Date du devis', data.devis.date_devis)}
-                            ${createInfoItem('Validité jusqu\'au', data.devis.validite)}
-                        </div>
-                    </div>
-                `;
-            }
-
+        function displayResults(result) {
+            // Afficher la section résultats
+            document.getElementById('results').classList.remove('d-none');
+            
+            // Métadonnées
+            const metadataDiv = document.getElementById('metadata');
+            const meta = result.api_metadata || {};
+            metadataDiv.innerHTML = `
+                <div class="col-md-6">
+                    <p><strong>Fichier:</strong> ${meta.filename || 'N/A'}</p>
+                    <p><strong>Taille:</strong> ${(meta.file_size / 1024).toFixed(2)} KB</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Temps de traitement:</strong> ${meta.processing_time?.toFixed(2)}s</p>
+                    <p><strong>Traitements trouvés:</strong> ${result.treatments?.length || 0}</p>
+                </div>
+            `;
+            
+            // Informations dentiste
+            const dentiste = result.basic_info?.dentiste || {};
+            document.getElementById('dentisteInfo').innerHTML = `
+                <p><strong>Nom:</strong> ${dentiste.nom_praticien || 'N/A'}</p>
+                <p><strong>RPPS:</strong> ${dentiste.rpps || 'N/A'}</p>
+                <p><strong>Adresse:</strong> ${dentiste.adresse || 'N/A'}</p>
+            `;
+            
+            // Informations patient
+            const patient = result.basic_info?.patient || {};
+            document.getElementById('patientInfo').innerHTML = `
+                <p><strong>Nom:</strong> ${patient.nom || 'N/A'}</p>
+                <p><strong>Date naissance:</strong> ${patient.date_naissance || 'N/A'}</p>
+                <p><strong>N° Sécurité sociale:</strong> ${patient.numero_securite_sociale || 'N/A'}</p>
+            `;
+            
+            // Informations devis
+            const devis = result.basic_info?.devis || {};
+            document.getElementById('devisInfo').innerHTML = `
+                <p><strong>Numéro:</strong> ${devis.numero || 'N/A'}</p>
+                <p><strong>Date:</strong> ${devis.date_devis || 'N/A'}</p>
+                <p><strong>Validité:</strong> ${devis.validite || 'N/A'}</p>
+            `;
+            
             // Traitements
-            if (data.traitements && data.traitements.length > 0) {
-                let treatmentsHtml = '<table class="treatments-table"><thead><tr>';
-                treatmentsHtml += '<th>Code Acte</th><th>Dent</th><th>Description</th><th>Panier</th>';
-                treatmentsHtml += '<th>Honoraires</th><th>Prix Dispositif</th><th>Base Remboursement</th><th>Reste à Charge</th>';
-                treatmentsHtml += '</tr></thead><tbody>';
-
-                data.traitements.forEach(traitement => {
-                    treatmentsHtml += `
-                        <tr>
-                            <td>${traitement.code_acte || '-'}</td>
-                            <td>${traitement.dent || '-'}</td>
-                            <td>${traitement.description || '-'}</td>
-                            <td>${traitement.panier || '-'}</td>
-                            <td>${formatCurrency(traitement.honoraires)}</td>
-                            <td>${formatCurrency(traitement.prix_dispositif_medical)}</td>
-                            <td>${formatCurrency(traitement.base_remboursement)}</td>
-                            <td>${formatCurrency(traitement.reste_a_charge)}</td>
-                        </tr>
-                    `;
-                });
-
-                treatmentsHtml += '</tbody></table>';
-                
-                html += `
-                    <div class="section">
-                        <h4>🦷 Traitements Prévus</h4>
-                        ${treatmentsHtml}
-                    </div>
+            const treatmentsBody = document.getElementById('treatmentsBody');
+            treatmentsBody.innerHTML = '';
+            
+            const treatments = result.treatments || [];
+            treatments.forEach(t => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="highlight">${t.code_acte || 'N/A'}</span></td>
+                    <td>${t.dent || 'N/A'}</td>
+                    <td>${t.description?.substring(0, 80) || ''}...</td>
+                    <td>€${t.honoraires?.toFixed(2) || '0.00'}</td>
+                    <td>€${t.reste_a_charge?.toFixed(2) || '0.00'}</td>
                 `;
-            }
-
+                treatmentsBody.appendChild(row);
+            });
+            
+            // Graphique des traitements
+            createTreatmentsChart(treatments);
+            
             // Résumé financier
-            if (data.financier) {
-                html += `
-                    <div class="section">
-                        <h4>💰 Résumé Financier</h4>
-                        <div class="financial-summary">
-                            ${createFinancialItem('Honoraires Total', data.financier.honoraires_total)}
-                            ${createFinancialItem('Prix Dispositif Médical', data.financier.prix_dispositif_medical)}
-                            ${createFinancialItem('Base Remboursement AMO', data.financier.base_remboursement_amo)}
-                            ${createFinancialItem('Montant Remboursé AMO', data.financier.montant_rembourse_amo)}
-                            ${createFinancialItem('Reste à Charge', data.financier.reste_a_charge)}
-                        </div>
+            const finance = result.financial_summary || {};
+            document.getElementById('financialSummary').innerHTML = `
+                <div class="col-md-4">
+                    <div class="alert alert-success">
+                        <h6>Total Honoraires</h6>
+                        <h4>€${finance.honoraires_total?.toFixed(2) || '0.00'}</h4>
                     </div>
-                `;
-            }
-
-            // Informations complémentaires
-            if (data.informations_complementaires) {
-                const info = data.informations_complementaires;
-                html += `
-                    <div class="section">
-                        <h4>📝 Informations Complémentaires</h4>
-                        <div class="info-grid">
-                            ${createInfoItem('Consentement éclairé', info.consentement_eclaire_present ? 'Oui' : 'Non')}
-                            ${createInfoItem('Date consentement', info.date_consentement)}
-                            ${createInfoItem('Acompte requis', info.acompte_requis ? 'Oui' : 'Non')}
-                            ${createInfoItem('Téléphone', info.telephone)}
-                            ${createInfoItem('Signature patient', info.signature_patient ? 'Oui' : 'Non')}
-                        </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-warning">
+                        <h6>Reste à Charge</h6>
+                        <h4>€${finance.reste_a_charge_total?.toFixed(2) || '0.00'}</h4>
                     </div>
-                `;
-            }
-
-            results.innerHTML = html;
-            showResults();
-        }
-
-        function createInfoItem(label, value) {
-            if (!value) return '';
-            return `
-                <div class="info-item">
-                    <div class="info-label">${label}</div>
-                    <div class="info-value">${value}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-info">
+                        <h6>Base Remboursement</h6>
+                        <h4>€${finance.base_remboursement_total?.toFixed(2) || '0.00'}</h4>
+                    </div>
                 </div>
             `;
+            
+            // Graphique financier
+            createFinanceChart(finance);
         }
 
-        function createFinancialItem(label, value) {
-            return `
-                <div class="financial-item">
-                    <div class="financial-label">${label}</div>
-                    <div class="financial-value">${formatCurrency(value)}</div>
-                </div>
-            `;
+        function createTreatmentsChart(treatments) {
+            const ctx = document.getElementById('treatmentsChart').getContext('2d');
+            const codes = treatments.map(t => t.code_acte).slice(0, 10);
+            const amounts = treatments.map(t => t.honoraires || 0).slice(0, 10);
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: codes,
+                    datasets: [{
+                        label: 'Honoraires (€)',
+                        data: amounts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Répartition des honoraires par acte'
+                        }
+                    }
+                }
+            });
         }
 
-        function formatCurrency(amount) {
-            if (amount === null || amount === undefined) return '-';
-            return new Intl.NumberFormat('fr-FR', {
-                style: 'currency',
-                currency: 'EUR'
-            }).format(amount);
+        function createFinanceChart(finance) {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Reste à charge', 'Base remboursement', 'Autres'],
+                    datasets: [{
+                        data: [
+                            finance.reste_a_charge_total || 0,
+                            finance.base_remboursement_total || 0,
+                            (finance.honoraires_total || 0) - ((finance.reste_a_charge_total || 0) + (finance.base_remboursement_total || 0))
+                        ],
+                        backgroundColor: [
+                            '#ff6384',
+                            '#36a2eb',
+                            '#cc65fe'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Répartition financière'
+                        }
+                    }
+                }
+            });
         }
 
-        function showLoading() {
-            loading.style.display = 'block';
+        function downloadJSON() {
+            if (!currentResult) return;
+            
+            const dataStr = JSON.stringify(currentResult, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `devis_extraction_${Date.now()}.json`;
+            link.click();
+            
+            URL.revokeObjectURL(url);
         }
 
-        function hideLoading() {
-            loading.style.display = 'none';
-        }
-
-        function showResults() {
-            results.style.display = 'block';
-        }
-
-        function hideResults() {
-            results.style.display = 'none';
-        }
-
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-        }
-
-        function hideError() {
-            errorMessage.style.display = 'none';
-        }
-
-        function showSuccess(message) {
-            successMessage.textContent = message;
-            successMessage.style.display = 'block';
-        }
-
-        function hideSuccess() {
-            successMessage.style.display = 'none';
-        }
+        // Gestion des erreurs globales
+        window.addEventListener('error', function(e) {
+            console.error('Erreur globale:', e.error);
+            alert('Une erreur est survenue. Voir la console pour plus de détails.');
+        });
     </script>
 </body>
 </html>

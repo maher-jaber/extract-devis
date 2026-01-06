@@ -59,10 +59,15 @@ COPY requirements.txt /app/
 RUN python3 -m pip install --no-cache-dir --upgrade pip \
  && python3 -m pip install --no-cache-dir --ignore-installed -r requirements.txt
 
+ RUN apt-get update \
+ && apt-get install -y tesseract-ocr \
+ && apt-get install -y tesseract-ocr-fra tesseract-ocr-eng
+ 
 # ✅ Pré-télécharger les modèles PaddleOCR (CPU à la build)
 RUN mkdir -p /models/paddleocr && \
     python3 - << 'EOF'
 from paddleocr import PaddleOCR
+
 
 print("⬇ Downloading PaddleOCR models...")
 PaddleOCR(
